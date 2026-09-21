@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>てだしチェック - 提出物確認ボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FBF7EE;
+    --cream-deep:#F3EBD8;
+    --ink:#22303F;
+    --ink-soft:#4B5A69;
+    --line:#E4DAC0;
+    --line-strong:#D8CBA5;
+    --teal:#1E8F76;
+    --teal-deep:#0E5F4D;
+    --teal-bg:#E4F4EE;
+    --coral:#E2622F;
+    --coral-deep:#9C3E17;
+    --coral-bg:#FCEAE0;
+    --mustard:#D99A1E;
+    --mustard-deep:#8C5F09;
+    --mustard-bg:#FBF0D8;
+    --indigo:#4A5FA8;
+    --indigo-deep:#2C3A6E;
+    --indigo-bg:#E7EAF6;
+    --plum:#A24E82;
+    --plum-deep:#6B2E54;
+    --plum-bg:#F5E6EF;
+    --white:#FFFFFF;
+    --shadow: 0 3px 0 rgba(34,48,63,0.10);
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    color-scheme: light;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    height:100%;
+    margin:0;
+  }
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  body{
+    background: var(--cream);
+    font-family: "Noto Sans JP", sans-serif;
+    color: var(--ink);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app-name, .card-title, .modal-title, .btn, .name-chip, .roster-name{
+    font-family: "Zen Maru Gothic", "Noto Sans JP", sans-serif;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    flex: 0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding: env(safe-area-inset-top,0px) 22px 12px;
+    padding-top: max(14px, env(safe-area-inset-top,0px));
+    background: var(--white);
+    border-bottom: 3px solid var(--line);
+    flex-wrap: wrap;
+  }
+  .app-name{
+    font-weight:900;
+    font-size: clamp(20px, 2.6vw, 28px);
+    color: var(--teal-deep);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-right: auto;
+    white-space:nowrap;
+  }
+  .app-name .dot{
+    width:14px;height:14px;border-radius:50%;
+    background: var(--coral);
+    flex:0 0 auto;
+  }
+  .btn{
+    border:none;
+    border-radius: 999px;
+    padding: 10px 18px;
+    font-size: 15px;
+    font-weight:700;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    transition: transform .12s ease, box-shadow .12s ease;
+    box-shadow: var(--shadow);
+    white-space: nowrap;
+  }
+  .btn:active{ transform: translateY(2px); box-shadow: 0 1px 0 rgba(34,48,63,0.10); }
+  .btn-primary{ background: var(--teal); color:#fff; }
+  .btn-ghost{ background: var(--cream-deep); color: var(--ink-soft); }
+  .btn-ghost:hover{ background:#EEE3C6; }
+  .btn-sm{ padding:6px 12px; font-size:13px; border-radius:999px; }
+
+  #syncStatus{
+    font-size:13px;
+    font-weight:700;
+    color: var(--ink-soft);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding: 6px 12px;
+    background: var(--cream-deep);
+    border-radius: 999px;
+    white-space:nowrap;
+  }
+  #syncStatus .light{
+    width:9px;height:9px;border-radius:50%;
+    background: #B7AF95;
+    transition: background .2s ease;
+  }
+  #syncStatus.online .light{ background: var(--teal); box-shadow:0 0 0 3px var(--teal-bg); }
+  #syncStatus.error .light{ background: var(--coral); box-shadow:0 0 0 3px var(--coral-bg); }
+  #syncStatus.local .light{ background: var(--mustard); box-shadow:0 0 0 3px var(--mustard-bg); }
+
+  /* ---------- Main board ---------- */
+  main{
+    flex: 1 1 auto;
+    overflow: hidden;
+    padding: 16px 22px 22px;
+    display:flex;
+  }
+  #board{
+    display:flex;
+    gap:18px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    flex:1 1 auto;
+    padding-bottom: 6px;
+    scroll-behavior:smooth;
+  }
+  #board::-webkit-scrollbar{ height:12px; }
+  #board::-webkit-scrollbar-thumb{ background: var(--line-strong); border-radius:99px; }
+  #board::-webkit-scrollbar-track{ background: transparent; }
+
+  .empty-board{
+    margin:auto;
+    text-align:center;
+    color: var(--ink-soft);
+  }
+  .empty-board .big{
+    font-size:22px;
+    font-weight:900;
+    font-family:"Zen Maru Gothic",sans-serif;
+    color: var(--teal-deep);
+    margin-bottom:8px;
+  }
+
+  .card{
+    flex: 0 0 clamp(230px, 22vw, 300px);
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    border: 3px solid var(--line);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    box-shadow: 0 4px 0 rgba(34,48,63,0.06);
+  }
+  .card-head{
+    flex:0 0 auto;
+    padding: 14px 16px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    color:#fff;
+  }
+  .card-head-top{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:8px;
+  }
+  .card-title{
+    font-size: 19px;
+    font-weight:900;
+    line-height:1.25;
+    word-break: break-word;
+  }
+  .card-del{
+    flex:0 0 auto;
+    width:30px;height:30px;
+    border-radius:50%;
+    border:none;
+    background: rgba(255,255,255,0.28);
+    color:#fff;
+    font-size:16px;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    line-height:1;
+  }
+  .card-del:active{ background: rgba(255,255,255,0.5); }
+  .card-count{
+    font-size:14px;
+    font-weight:700;
+    opacity:0.95;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .card-count .num{
+    font-size:26px;
+    font-weight:900;
+    font-family:"Zen Maru Gothic",sans-serif;
+  }
+  .card-count.zero{
+    background: rgba(255,255,255,0.24);
+    border-radius: 10px;
+    padding:4px 10px;
+    width:fit-content;
+  }
+
+  .card-color-1 .card-head{ background: linear-gradient(180deg, var(--teal), var(--teal-deep)); }
+  .card-color-2 .card-head{ background: linear-gradient(180deg, var(--coral), var(--coral-deep)); }
+  .card-color-3 .card-head{ background: linear-gradient(180deg, var(--mustard), var(--mustard-deep)); }
+  .card-color-4 .card-head{ background: linear-gradient(180deg, var(--indigo), var(--indigo-deep)); }
+  .card-color-5 .card-head{ background: linear-gradient(180deg, var(--plum), var(--plum-deep)); }
+
+  .card-body{
+    flex:1 1 auto;
+    overflow-y:auto;
+    padding: 12px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .card-body::-webkit-scrollbar{ width:10px; }
+  .card-body::-webkit-scrollbar-thumb{ background: var(--line-strong); border-radius:99px; }
+
+  .name-chip{
+    background: var(--coral-bg);
+    color: var(--coral-deep);
+    border: 2px solid #F3C7AE;
+    border-radius: var(--radius-md);
+    padding: 13px 14px;
+    font-size: 19px;
+    font-weight:700;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    user-select:none;
+    transition: transform .08s ease, background .15s ease, opacity .25s ease;
+  }
+  .name-chip:active{ transform: scale(0.97); }
+  .name-chip .check-hint{
+    flex:0 0 auto;
+    width:26px;height:26px;
+    border-radius:50%;
+    border:2px solid #F3C7AE;
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;
+    color: transparent;
+    background: #fff;
+  }
+  .name-chip.done{
+    background: var(--teal-bg);
+    color: var(--teal-deep);
+    border-color:#B9E2D4;
+    transform: scale(0.98);
+    opacity:0;
+    pointer-events:none;
+  }
+  .name-chip.done .check-hint{
+    background: var(--teal);
+    border-color: var(--teal);
+    color:#fff;
+  }
+
+  .card-empty{
+    margin:auto;
+    text-align:center;
+    color: var(--teal-deep);
+    font-weight:900;
+    font-size:17px;
+    font-family:"Zen Maru Gothic",sans-serif;
+    padding: 20px 10px;
+  }
+  .card-empty .sub{
+    font-weight:400;
+    font-size:13px;
+    color: var(--ink-soft);
+    margin-top:4px;
+    font-family:"Noto Sans JP",sans-serif;
+  }
+
+  .card-foot{
+    flex:0 0 auto;
+    padding: 10px 12px 14px;
+    border-top: 2px dashed var(--line);
+  }
+  .add-absent-btn{
+    width:100%;
+    background: var(--cream-deep);
+    color: var(--ink-soft);
+    border:2px dashed var(--line-strong);
+    border-radius: var(--radius-md);
+    padding: 11px;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:"Zen Maru Gothic",sans-serif;
+  }
+  .add-absent-btn:active{ background:#EEE3C6; }
+
+  .add-card{
+    flex: 0 0 clamp(150px, 12vw, 190px);
+    border: 3px dashed var(--line-strong);
+    border-radius: var(--radius-lg);
+    background: transparent;
+    color: var(--ink-soft);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    cursor:pointer;
+    font-family:"Zen Maru Gothic",sans-serif;
+    font-weight:900;
+    font-size:16px;
+  }
+  .add-card:active{ background: var(--cream-deep); }
+  .add-card .plus{
+    font-size:34px;
+    width:52px;height:52px;
+    border-radius:50%;
+    background: var(--cream-deep);
+    display:flex;align-items:center;justify-content:center;
+    color: var(--teal-deep);
+  }
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed; inset:0;
+    background: rgba(34,48,63,0.45);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:20px;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background:#fff;
+    border-radius: var(--radius-lg);
+    width:100%;
+    max-width:520px;
+    max-height: 84vh;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    box-shadow: 0 10px 0 rgba(34,48,63,0.12);
+  }
+  .modal-head{
+    flex:0 0 auto;
+    padding:18px 20px 14px;
+    border-bottom: 2px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .modal-title{
+    font-size:19px;
+    font-weight:900;
+    color: var(--teal-deep);
+  }
+  .modal-close{
+    width:34px;height:34px;
+    border-radius:50%;
+    border:none;
+    background: var(--cream-deep);
+    font-size:18px;
+    cursor:pointer;
+    color: var(--ink-soft);
+  }
+  .modal-body{
+    flex:1 1 auto;
+    overflow-y:auto;
+    padding: 18px 20px;
+  }
+  .modal-foot{
+    flex:0 0 auto;
+    padding: 14px 20px;
+    border-top: 2px solid var(--line);
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+  }
+  .field-label{
+    font-size:14px;
+    font-weight:700;
+    color: var(--ink-soft);
+    margin-bottom:6px;
+    display:block;
+  }
+  .hint{
+    font-size:12.5px;
+    color: var(--ink-soft);
+    opacity:0.85;
+    margin: 4px 0 12px;
+    line-height:1.5;
+  }
+  textarea, input[type=text], input[type=url]{
+    width:100%;
+    border: 2px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding: 11px 13px;
+    font-size:15px;
+    font-family:"Noto Sans JP",sans-serif;
+    color: var(--ink);
+    background: var(--cream);
+    resize: vertical;
+  }
+  textarea:focus, input:focus{ outline:2px solid var(--teal); border-color: var(--teal); }
+  textarea{ min-height:180px; line-height:1.7; }
+
+  .roster-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .roster-name{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    border: 2px solid var(--line);
+    background: var(--cream);
+    font-size:17px;
+    font-weight:700;
+    cursor:pointer;
+    user-select:none;
+  }
+  .roster-name.checked{
+    background: var(--teal-bg);
+    border-color: var(--teal);
+    color: var(--teal-deep);
+  }
+  .roster-name .box{
+    flex:0 0 auto;
+    width:24px;height:24px;
+    border-radius:7px;
+    border:2px solid var(--line-strong);
+    background:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;
+    color:transparent;
+  }
+  .roster-name.checked .box{
+    background: var(--teal);
+    border-color: var(--teal);
+    color:#fff;
+  }
+  .roster-search{
+    margin-bottom:12px;
+  }
+  .roster-empty-msg{
+    text-align:center;
+    color: var(--ink-soft);
+    font-size:14px;
+    padding: 30px 10px;
+  }
+
+  .color-picker{
+    display:flex;
+    gap:10px;
+    margin-bottom:16px;
+  }
+  .color-dot{
+    width:38px;height:38px;
+    border-radius:50%;
+    border:3px solid transparent;
+    cursor:pointer;
+  }
+  .color-dot.active{ border-color: var(--ink); }
+  .color-dot.c1{ background: var(--teal); }
+  .color-dot.c2{ background: var(--coral); }
+  .color-dot.c3{ background: var(--mustard); }
+  .color-dot.c4{ background: var(--indigo); }
+  .color-dot.c5{ background: var(--plum); }
+
+  .status-box{
+    background: var(--cream-deep);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    font-size:13px;
+    color: var(--ink-soft);
+    line-height:1.6;
+    margin-top:14px;
+  }
+  .status-box b{ color: var(--ink); }
+
+  @media (max-width: 720px){
+    header{ padding:12px 14px 10px; gap:8px; }
+    .app-name{ font-size:18px; margin-right:0; flex:1 1 100%; }
+    #syncStatus{ margin-left:auto; }
+    main{ padding:12px 14px 14px; }
+    .card{ flex-basis: 78vw; }
+    .add-card{ flex-basis: 40vw; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="app-name"><span class="dot"></span>てだしチェック</div>
+  <button class="btn btn-ghost" id="openRosterBtn">名簿設定</button>
+  <button class="btn btn-ghost" id="openGasBtn">GAS設定</button>
+  <button class="btn btn-primary" id="openAddCardBtn">＋提出物を追加</button>
+  <div id="syncStatus" class="local"><span class="light"></span><span id="syncStatusText">ローカルのみ</span></div>
+</header>
+
+<main>
+  <div id="board"></div>
+</main>
+
+<!-- 名簿設定モーダル -->
+<div class="overlay" id="rosterOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">名簿設定</div>
+      <button class="modal-close" id="closeRosterBtn">×</button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label">クラスの名簿（1行に1人ずつ）</label>
+      <div class="hint">Excelなどから名前の列をコピーして、そのまま貼り付けできます。</div>
+      <textarea id="rosterTextarea" placeholder="山田　太郎&#10;佐藤　花子&#10;鈴木　次郎"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cancelRosterBtn">キャンセル</button>
+      <button class="btn btn-primary" id="saveRosterBtn">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAS設定モーダル -->
+<div class="overlay" id="gasOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">GAS 同期設定</div>
+      <button class="modal-close" id="closeGasBtn">×</button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label">GAS Web API の URL</label>
+      <div class="hint">Google Apps Script をウェブアプリとして公開したURLを入力すると、複数の端末でリアルタイムに共有できます。空欄のままだと、この端末だけに保存されます。</div>
+      <input type="url" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+      <div class="status-box">
+        <b>送信：</b>操作のたびに自動で送信します。<br>
+        <b>受信：</b>10秒ごとに最新データを取得し、変化があれば画面を更新します。<br>
+        <b>注意：</b>画面が非表示（他のタブ）の間は自動取得を止めます。
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cancelGasBtn">キャンセル</button>
+      <button class="btn btn-primary" id="saveGasBtn">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 提出物追加モーダル -->
+<div class="overlay" id="addCardOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">提出物を追加</div>
+      <button class="modal-close" id="closeAddCardBtn">×</button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label">提出物の名前</label>
+      <div class="hint">例：宿題、連絡帳、音読カード、体操服 など</div>
+      <input type="text" id="newCardTitle" placeholder="例：宿題">
+      <label class="field-label" style="margin-top:16px;">カードの色</label>
+      <div class="color-picker">
+        <div class="color-dot c1 active" data-color="1"></div>
+        <div class="color-dot c2" data-color="2"></div>
+        <div class="color-dot c3" data-color="3"></div>
+        <div class="color-dot c4" data-color="4"></div>
+        <div class="color-dot c5" data-color="5"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cancelAddCardBtn">キャンセル</button>
+      <button class="btn btn-primary" id="saveAddCardBtn">追加する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 未提出者選択モーダル -->
+<div class="overlay" id="pickOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="pickModalTitle">未提出者を選択</div>
+      <button class="modal-close" id="closePickBtn">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" class="roster-search" id="rosterSearchInput" placeholder="名前で絞り込み">
+      <div class="roster-list" id="pickRosterList"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cancelPickBtn">キャンセル</button>
+      <button class="btn btn-primary" id="savePickBtn">追加する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "teDashi_data_v1";
+  var SETTINGS_KEY = "teDashi_settings_v1";
+  var POLL_INTERVAL_MS = 10000;
+
+  var state = {
+    roster: [],
+    cards: []
+  };
+  var settings = { gasUrl: "" };
+  var lastRemoteSnapshot = null;
+  var pollTimer = null;
+  var pendingPickCardId = null;
+  var addCardColor = "1";
+
+  // ---------- Utilities ----------
+  function uid(){
+    return "id" + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function stableStringify(obj){
+    return JSON.stringify(obj);
+  }
+
+  // ---------- Storage (local backup) ----------
+  function loadLocal(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        var parsed = JSON.parse(raw);
+        if(parsed && Array.isArray(parsed.roster) && Array.isArray(parsed.cards)){
+          state = parsed;
+        }
+      }
+    }catch(e){ console.error("load local failed", e); }
+    try{
+      var rawS = localStorage.getItem(SETTINGS_KEY);
+      if(rawS){
+        var parsedS = JSON.parse(rawS);
+        if(parsedS && typeof parsedS.gasUrl === "string"){ settings = parsedS; }
+      }
+    }catch(e){ console.error("load settings failed", e); }
+  }
+  function saveLocal(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch(e){ console.error("save local failed", e); }
+  }
+  function saveSettings(){
+    try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+    catch(e){ console.error("save settings failed", e); }
+  }
+
+  // ---------- Sync status UI ----------
+  function setSyncStatus(mode, text){
+    var el = document.getElementById("syncStatus");
+    el.className = mode;
+    document.getElementById("syncStatusText").textContent = text;
+  }
+  function refreshSyncStatusIdle(){
+    if(!settings.gasUrl){
+      setSyncStatus("local", "ローカルのみ");
+    }else{
+      setSyncStatus("online", "同期中");
+    }
+  }
+
+  // ---------- GAS communication ----------
+  function pushToGas(){
+    if(!settings.gasUrl) return;
+    var payload = {
+      roster: state.roster,
+      cards: state.cards,
+      updatedAt: Date.now()
+    };
+    lastRemoteSnapshot = stableStringify(payload);
+    fetch(settings.gasUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    }).then(function(res){
+      if(!res.ok) throw new Error("status " + res.status);
+      setSyncStatus("online", "同期中");
+    }).catch(function(err){
+      console.error("push failed", err);
+      setSyncStatus("error", "送信エラー");
+    });
+  }
+
+  function pullFromGas(){
+    if(!settings.gasUrl) return;
+    if(document.hidden) return;
+    fetch(settings.gasUrl, { method: "GET" })
+      .then(function(res){
+        if(!res.ok) throw new Error("status " + res.status);
+        return res.json();
+      })
+      .then(function(data){
+        if(!data || !Array.isArray(data.roster) || !Array.isArray(data.cards)){
+          throw new Error("invalid payload");
+        }
+        var incoming = { roster: data.roster, cards: data.cards };
+        var incomingStr = stableStringify(incoming);
+        if(incomingStr === lastRemoteSnapshot){
+          setSyncStatus("online", "同期中");
+          return;
+        }
+        lastRemoteSnapshot = incomingStr;
+        state.roster = incoming.roster;
+        state.cards = incoming.cards;
+        saveLocal();
+        render();
+        setSyncStatus("online", "同期中");
+      })
+      .catch(function(err){
+        console.error("pull failed", err);
+        setSyncStatus("error", "受信エラー");
+      });
+  }
+
+  function startPolling(){
+    if(pollTimer) clearInterval(pollTimer);
+    if(!settings.gasUrl) return;
+    pollTimer = setInterval(function(){
+      pullFromGas();
+    }, POLL_INTERVAL_MS);
+  }
+
+  document.addEventListener("visibilitychange", function(){
+    if(!document.hidden && settings.gasUrl){
+      pullFromGas();
+    }
+  });
+
+  // ---------- Core data mutation + persist + sync ----------
+  function commit(){
+    saveLocal();
+    pushToGas();
+    render();
+  }
+
+  // ---------- Card colors ----------
+  var CARD_COLORS = ["1","2","3","4","5"];
+
+  // ---------- Rendering ----------
+  function render(){
+    renderBoard();
+  }
+
+  function renderBoard(){
+    var board = document.getElementById("board");
+    board.innerHTML = "";
+
+    if(state.cards.length === 0){
+      var empty = document.createElement("div");
+      empty.className = "empty-board";
+      empty.innerHTML = '<div class="big">まだ提出物がありません</div><div>右上の「＋提出物を追加」から始めましょう</div>';
+      board.appendChild(empty);
+    }
+
+    state.cards.forEach(function(card){
+      board.appendChild(buildCardEl(card));
+    });
+
+    var addCardEl = document.createElement("div");
+    addCardEl.className = "add-card";
+    addCardEl.innerHTML = '<div class="plus">＋</div><div>提出物を追加</div>';
+    addCardEl.addEventListener("click", openAddCardModal);
+    board.appendChild(addCardEl);
+  }
+
+  function buildCardEl(card){
+    var wrap = document.createElement("div");
+    wrap.className = "card card-color-" + (card.color || "1");
+    wrap.dataset.cardId = card.id;
+
+    var head = document.createElement("div");
+    head.className = "card-head";
+
+    var top = document.createElement("div");
+    top.className = "card-head-top";
+    var title = document.createElement("div");
+    title.className = "card-title";
+    title.textContent = card.title;
+    var delBtn = document.createElement("button");
+    delBtn.className = "card-del";
+    delBtn.setAttribute("aria-label", "この提出物を削除");
+    delBtn.textContent = "×";
+    delBtn.addEventListener("click", function(){ confirmDeleteCard(card.id); });
+    top.appendChild(title);
+    top.appendChild(delBtn);
+    head.appendChild(top);
+
+    var count = document.createElement("div");
+    var n = card.unsubmitted.length;
+    count.className = "card-count" + (n === 0 ? " zero" : "");
+    if(n === 0){
+      count.innerHTML = '<span>✓ 全員提出ずみ！</span>';
+    }else{
+      count.innerHTML = '<span class="num">' + n + '</span><span>人 未提出</span>';
+    }
+    head.appendChild(count);
+
+    wrap.appendChild(head);
+
+    var body = document.createElement("div");
+    body.className = "card-body";
+    if(card.unsubmitted.length === 0){
+      var emptyMsg = document.createElement("div");
+      emptyMsg.className = "card-empty";
+      emptyMsg.innerHTML = "やったね！<div class='sub'>未提出の人はいません</div>";
+      body.appendChild(emptyMsg);
+    }else{
+      card.unsubmitted.forEach(function(name){
+        var chip = document.createElement("div");
+        chip.className = "name-chip";
+        chip.innerHTML = '<span>' + escapeHtml(name) + '</span><span class="check-hint">✓</span>';
+        chip.addEventListener("click", function(){ markSubmitted(card.id, name, chip); });
+        body.appendChild(chip);
+      });
+    }
+    wrap.appendChild(body);
+
+    var foot = document.createElement("div");
+    foot.className = "card-foot";
+    var addBtn = document.createElement("button");
+    addBtn.className = "add-absent-btn";
+    addBtn.textContent = "＋未提出者を選択";
+    addBtn.addEventListener("click", function(){ openPickModal(card.id); });
+    foot.appendChild(addBtn);
+    wrap.appendChild(foot);
+
+    return wrap;
+  }
+
+  function markSubmitted(cardId, name, chipEl){
+    chipEl.classList.add("done");
+    setTimeout(function(){
+      var card = state.cards.find(function(c){ return c.id === cardId; });
+      if(card){
+        card.unsubmitted = card.unsubmitted.filter(function(n){ return n !== name; });
+      }
+      commit();
+    }, 240);
+  }
+
+  function confirmDeleteCard(cardId){
+    var card = state.cards.find(function(c){ return c.id === cardId; });
+    if(!card) return;
+    if(!window.confirm('「' + card.title + '」を削除しますか？')) return;
+    state.cards = state.cards.filter(function(c){ return c.id !== cardId; });
+    commit();
+  }
+
+  // ---------- Roster settings modal ----------
+  var rosterOverlay = document.getElementById("rosterOverlay");
+  var rosterTextarea = document.getElementById("rosterTextarea");
+  document.getElementById("openRosterBtn").addEventListener("click", function(){
+    rosterTextarea.value = state.roster.join("\n");
+    rosterOverlay.classList.add("show");
+  });
+  document.getElementById("closeRosterBtn").addEventListener("click", function(){ rosterOverlay.classList.remove("show"); });
+  document.getElementById("cancelRosterBtn").addEventListener("click", function(){ rosterOverlay.classList.remove("show"); });
+  document.getElementById("saveRosterBtn").addEventListener("click", function(){
+    var names = rosterTextarea.value.split("\n").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
+    state.roster = names;
+    rosterOverlay.classList.remove("show");
+    commit();
+  });
+
+  // ---------- GAS settings modal ----------
+  var gasOverlay = document.getElementById("gasOverlay");
+  var gasUrlInput = document.getElementById("gasUrlInput");
+  document.getElementById("openGasBtn").addEventListener("click", function(){
+    gasUrlInput.value = settings.gasUrl || "";
+    gasOverlay.classList.add("show");
+  });
+  document.getElementById("closeGasBtn").addEventListener("click", function(){ gasOverlay.classList.remove("show"); });
+  document.getElementById("cancelGasBtn").addEventListener("click", function(){ gasOverlay.classList.remove("show"); });
+  document.getElementById("saveGasBtn").addEventListener("click", function(){
+    settings.gasUrl = gasUrlInput.value.trim();
+    saveSettings();
+    gasOverlay.classList.remove("show");
+    refreshSyncStatusIdle();
+    startPolling();
+    if(settings.gasUrl){ pullFromGas(); }
+  });
+
+  // ---------- Add card modal ----------
+  var addCardOverlay = document.getElementById("addCardOverlay");
+  var newCardTitleInput = document.getElementById("newCardTitle");
+  function openAddCardModal(){
+    newCardTitleInput.value = "";
+    addCardColor = String((state.cards.length % 5) + 1);
+    Array.prototype.forEach.call(document.querySelectorAll(".color-dot"), function(d){
+      d.classList.toggle("active", d.dataset.color === addCardColor);
+    });
+    addCardOverlay.classList.add("show");
+    setTimeout(function(){ newCardTitleInput.focus(); }, 50);
+  }
+  document.getElementById("openAddCardBtn").addEventListener("click", openAddCardModal);
+  document.getElementById("closeAddCardBtn").addEventListener("click", function(){ addCardOverlay.classList.remove("show"); });
+  document.getElementById("cancelAddCardBtn").addEventListener("click", function(){ addCardOverlay.classList.remove("show"); });
+  Array.prototype.forEach.call(document.querySelectorAll(".color-dot"), function(d){
+    d.addEventListener("click", function(){
+      addCardColor = d.dataset.color;
+      Array.prototype.forEach.call(document.querySelectorAll(".color-dot"), function(x){
+        x.classList.toggle("active", x === d);
+      });
+    });
+  });
+  document.getElementById("saveAddCardBtn").addEventListener("click", function(){
+    var title = newCardTitleInput.value.trim();
+    if(!title){
+      newCardTitleInput.focus();
+      newCardTitleInput.style.borderColor = "var(--coral)";
+      setTimeout(function(){ newCardTitleInput.style.borderColor = ""; }, 900);
+      return;
+    }
+    state.cards.push({ id: uid(), title: title, color: addCardColor, unsubmitted: [] });
+    addCardOverlay.classList.remove("show");
+    commit();
+  });
+  newCardTitleInput.addEventListener("keydown", function(e){
+    if(e.key === "Enter"){ document.getElementById("saveAddCardBtn").click(); }
+  });
+
+  // ---------- Pick unsubmitted modal ----------
+  var pickOverlay = document.getElementById("pickOverlay");
+  var pickRosterList = document.getElementById("pickRosterList");
+  var rosterSearchInput = document.getElementById("rosterSearchInput");
+  var pickChecked = {};
+
+  function openPickModal(cardId){
+    pendingPickCardId = cardId;
+    var card = state.cards.find(function(c){ return c.id === cardId; });
+    document.getElementById("pickModalTitle").textContent = card ? (card.title + " - 未提出者を選択") : "未提出者を選択";
+    pickChecked = {};
+    rosterSearchInput.value = "";
+    renderPickList();
+    pickOverlay.classList.add("show");
+  }
+
+  function renderPickList(){
+    var card = state.cards.find(function(c){ return c.id === pendingPickCardId; });
+    var already = card ? card.unsubmitted : [];
+    var filter = rosterSearchInput.value.trim();
+    var list = state.roster.filter(function(n){ return already.indexOf(n) === -1; });
+    if(filter){ list = list.filter(function(n){ return n.indexOf(filter) !== -1; }); }
+
+    pickRosterList.innerHTML = "";
+    if(state.roster.length === 0){
+      pickRosterList.innerHTML = '<div class="roster-empty-msg">名簿が登録されていません。<br>「名簿設定」から名簿を登録してください。</div>';
+      return;
+    }
+    if(list.length === 0){
+      pickRosterList.innerHTML = '<div class="roster-empty-msg">対象の名前がありません。</div>';
+      return;
+    }
+    list.forEach(function(name){
+      var row = document.createElement("div");
+      row.className = "roster-name" + (pickChecked[name] ? " checked" : "");
+      row.innerHTML = '<span class="box">✓</span><span>' + escapeHtml(name) + '</span>';
+      row.addEventListener("click", function(){
+        pickChecked[name] = !pickChecked[name];
+        row.classList.toggle("checked", !!pickChecked[name]);
+        row.querySelector(".box").style.color = pickChecked[name] ? "" : "transparent";
+      });
+      pickRosterList.appendChild(row);
+    });
+  }
+  rosterSearchInput.addEventListener("input", renderPickList);
+
+  document.getElementById("closePickBtn").addEventListener("click", function(){ pickOverlay.classList.remove("show"); });
+  document.getElementById("cancelPickBtn").addEventListener("click", function(){ pickOverlay.classList.remove("show"); });
+  document.getElementById("savePickBtn").addEventListener("click", function(){
+    var card = state.cards.find(function(c){ return c.id === pendingPickCardId; });
+    if(!card){ pickOverlay.classList.remove("show"); return; }
+    var toAdd = Object.keys(pickChecked).filter(function(n){ return pickChecked[n]; });
+    toAdd.forEach(function(name){
+      if(card.unsubmitted.indexOf(name) === -1){ card.unsubmitted.push(name); }
+    });
+    pickOverlay.classList.remove("show");
+    commit();
+  });
+
+  // ---------- Close overlays on backdrop click ----------
+  Array.prototype.forEach.call(document.querySelectorAll(".overlay"), function(ov){
+    ov.addEventListener("click", function(e){
+      if(e.target === ov){ ov.classList.remove("show"); }
+    });
+  });
+
+  // ---------- Init ----------
+  loadLocal();
+  if(state.roster.length === 0 && state.cards.length === 0){
+    state.roster = [];
+    state.cards = [];
+  }
+  render();
+  refreshSyncStatusIdle();
+  if(settings.gasUrl){
+    pullFromGas();
+  }
+  startPolling();
+
+})();
+</script>
+</body>
+</html>
