@@ -561,9 +561,9 @@
       <div class="hint">Google Apps Script をウェブアプリとして公開したURLを入力すると、複数の端末でリアルタイムに共有できます。空欄のままだと、この端末だけに保存されます。</div>
       <input type="url" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
       <div class="status-box">
-        <b>送信：</b>操作のたびに自動で送信します。<br>
-        <b>受信：</b>10秒ごとに最新データを取得し、変化があれば画面を更新します。<br>
-        <b>注意：</b>画面が非表示（他のタブ）の間は自動取得を止めます。
+        <b>送信：</b>操作のたびに、URLの末尾に <code>?data=...</code> を付けたGETリクエストで自動送信します（POSTのプリフライトを避けるためGET方式を使用）。<br>
+        <b>受信：</b>10秒ごとにパラメータなしのGETで最新データを取得し、変化があれば画面を更新します。<br>
+        <b>注意：</b>画面が非表示（他のタブ）の間は自動取得を止めます。GAS側は doGet(e) で e.parameter.data の有無を見て保存/取得を切り分けてください。
       </div>
     </div>
     <div class="modal-foot">
@@ -700,15 +700,18 @@
       updatedAt: Date.now()
     };
     lastRemoteSnapshot = stableStringify(payload);
-    fetch(settings.gasUrl, {
-      method: "POST",
+
+    // POSTではなくGETのクエリパラメータでデータを送ることで、
+    // application/json送信時に発生するプリフライト(OPTIONS)リクエストを
+    // 完全に回避する。GAS側は doGet(e) で e.parameter.data を受け取って保存する。
+    var url = settings.gasUrl
+      + (settings.gasUrl.indexOf("?") === -1 ? "?" : "&")
+      + "data=" + encodeURIComponent(JSON.stringify(payload));
+
+    fetch(url, {
+      method: "GET",
       mode: "cors",
-      redirect: "follow",
-      // Content-Type を text/plain にすることで、GAS宛のリクエストが
-      // 「シンプルリクエスト」として扱われ、application/json 指定時に
-      // 発生するプリフライト(OPTIONS)起因のCORSエラーを回避する。
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
+      redirect: "follow"
     }).then(function(res){
       if(!res.ok) throw new Error("status " + res.status);
       setSyncStatus("online", "同期中");
