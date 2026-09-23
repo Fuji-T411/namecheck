@@ -561,9 +561,9 @@
       <div class="hint">Google Apps Script をウェブアプリとして公開したURLを入力すると、複数の端末でリアルタイムに共有できます。空欄のままだと、この端末だけに保存されます。</div>
       <input type="url" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
       <div class="status-box">
-        <b>送信：</b>操作のたびに、URLの末尾に <code>?data=...</code> を付けたGETリクエストで自動送信します（POSTのプリフライトを避けるためGET方式を使用）。<br>
+        <b>送信：</b>操作のたびに、POST（Content-Type: text/plain）で自動送信します（プリフライトの発生するapplication/jsonは使いません）。<br>
         <b>受信：</b>10秒ごとにパラメータなしのGETで最新データを取得し、変化があれば画面を更新します。<br>
-        <b>注意：</b>画面が非表示（他のタブ）の間は自動取得を止めます。GAS側は doGet(e) で e.parameter.data の有無を見て保存/取得を切り分けてください。
+        <b>注意：</b>画面が非表示（他のタブ）の間は自動取得を止めます。GAS側は doPost(e) と doGet(e) の両方を用意してください。
       </div>
     </div>
     <div class="modal-foot">
@@ -699,21 +699,27 @@
       cards: state.cards,
       updatedAt: Date.now()
     };
-    lastRemoteSnapshot = stableStringify(payload);
+    var payloadStr = stableStringify(payload);
 
-    // POSTではなくGETのクエリパラメータでデータを送ることで、
-    // application/json送信時に発生するプリフライト(OPTIONS)リクエストを
-    // 完全に回避する。GAS側は doGet(e) で e.parameter.data を受け取って保存する。
-    var url = settings.gasUrl
-      + (settings.gasUrl.indexOf("?") === -1 ? "?" : "&")
-      + "data=" + encodeURIComponent(JSON.stringify(payload));
-
-    fetch(url, {
-      method: "GET",
+    // POSTだが Content-Type を text/plain にすることで「シンプルリクエスト」として扱われ、
+    // application/json指定時に発生するプリフライト(OPTIONS)起因のCORSエラーを回避する。
+    // GETのクエリパラメータ方式は手軽だが、名簿や未提出者が増えるとURLの長さ上限
+    // （ブラウザやGoogle側でおよそ2,000〜8,000文字程度）を超えて送信自体が失敗するため、
+    // 上限のないPOSTに戻している。
+    fetch(settings.gasUrl, {
+      method: "POST",
       mode: "cors",
-      redirect: "follow"
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: payloadStr
     }).then(function(res){
       if(!res.ok) throw new Error("status " + res.status);
+      // 送信が本当に成功したことを確認できた「後」にだけ、
+      // このデータをサーバーの最新状態として記録する。
+      // ここを送信前に更新してしまうと、送信が失敗した際に
+      // 次の受信(GET)で古いサーバーデータを「新着」と誤認し、
+      // ローカルの変更が上書き・消去されてしまう不具合が起きる。
+      lastRemoteSnapshot = payloadStr;
       setSyncStatus("online", "同期中");
     }).catch(function(err){
       console.error("push failed", err);
