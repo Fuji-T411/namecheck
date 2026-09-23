@@ -702,6 +702,11 @@
     lastRemoteSnapshot = stableStringify(payload);
     fetch(settings.gasUrl, {
       method: "POST",
+      mode: "cors",
+      redirect: "follow",
+      // Content-Type を text/plain にすることで、GAS宛のリクエストが
+      // 「シンプルリクエスト」として扱われ、application/json 指定時に
+      // 発生するプリフライト(OPTIONS)起因のCORSエラーを回避する。
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
     }).then(function(res){
@@ -716,10 +721,27 @@
   function pullFromGas(){
     if(!settings.gasUrl) return;
     if(document.hidden) return;
-    fetch(settings.gasUrl, { method: "GET" })
+    fetch(settings.gasUrl, {
+      method: "GET",
+      mode: "cors",
+      // GASのウェブアプリは一度 script.googleusercontent.com へ302リダイレクトされる。
+      // redirect:"follow" を明示し、fetchがそのリダイレクト先まで確実に追従するようにする。
+      redirect: "follow"
+    })
       .then(function(res){
         if(!res.ok) throw new Error("status " + res.status);
-        return res.json();
+        // .json() 自体が失敗する場合（不正なJSON等）にも
+        // 画面が固まらないよう、パース専用のtry/catchで受ける。
+        return res.text().then(function(text){
+          var data;
+          try{
+            data = JSON.parse(text);
+          }catch(parseErr){
+            console.error("json parse failed", parseErr, text);
+            throw new Error("invalid json response");
+          }
+          return data;
+        });
       })
       .then(function(data){
         if(!data || !Array.isArray(data.roster) || !Array.isArray(data.cards)){
@@ -741,6 +763,7 @@
       .catch(function(err){
         console.error("pull failed", err);
         setSyncStatus("error", "受信エラー");
+        // エラー時も画面操作やポーリングは継続させる（ここでreturnして終了するだけ）
       });
   }
 
